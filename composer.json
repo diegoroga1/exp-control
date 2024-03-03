@@ -1,0 +1,14 @@
+{
+    "name": "drgcode.expenses_control",
+    "description": "Expenses control",
+    "template_version": "0.0.1",
+    "type": "project",
+    "license": "proprietary",
+    "authors": [
+        {
+            "name": "DRG.code",
+            "email": "drg.code1@gmail.com"
+        }
+    ],
+    "require": {}
+}

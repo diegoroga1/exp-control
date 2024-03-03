@@ -1,0 +1,31 @@
+.menu-item{
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem !important;
+    border-bottom-width: 2px;
+    border-color: transparent;
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.25rem;
+    transition: all linear 150ms;
+    --tw-text-opacity: 1;
+    color: rgb(107, 114, 128, var(--tw-text-opacity));
+    &:hover{
+        transition: all linear 150ms;
+        outline: none;
+        --tw-border-opacity: 1;
+        border-color: rgb(209, 213, 219, var(--tw-border-opacity));
+    }
+    &.active{
+        --tw-border-opacity: 1;
+        border-color: rgb(129, 140, 248, var(--tw-border-opacity));
+        --tw-text-opacity: 1;
+        color: rgb(17, 24, 39, var(--tw-text-opacity));
+
+        &:focus{
+            transition: all linear 150ms;
+            outline: none;
+
+        }
+    }
+}

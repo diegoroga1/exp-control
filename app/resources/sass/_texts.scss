@@ -1,0 +1,12 @@
+@each $color, $value in $theme-colors {
+    .text-#{$color} {
+        color:$value !important;
+    }
+}
+
+.btn-xs {
+    border-radius: 0.2rem;
+    font-size: 0.78rem;
+    line-height: 1.5;
+    padding: 0.15rem 0.3rem;
+}

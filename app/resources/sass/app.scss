@@ -1,0 +1,21 @@
+// Fonts
+@import url('https://fonts.googleapis.com/css?family=Nunito');
+
+// Variables
+@import 'variables';
+@import 'mixins';
+@import "logo";
+@import "forms";
+@import "menu";
+@import "buttons";
+@import "texts";
+
+.breadcrumb{
+    font-size: .8em;
+    padding: 5px 15px;
+    //background: $primary
+}
+
+a{
+    color: $primary
+}

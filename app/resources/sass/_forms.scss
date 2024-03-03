@@ -1,0 +1,15 @@
+input{
+    padding: 5px;
+}
+
+select.form-control{
+    padding: 3px 30px 3px 10px;
+}
+
+label.required{
+    &:after{
+        content:'*';
+        color: red;
+        font-size: "9px";
+    }
+}

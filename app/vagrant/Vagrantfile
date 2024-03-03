@@ -1,0 +1,166 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# vagrant plugin install vagrant-vbguest
+Vagrant.configure("2") do |config|
+
+  config.vm.box = "bento/ubuntu-20.04" # recommended by Hashicorp
+  config.vm.box_check_update = true
+  config.vm.hostname = "mcl.local"
+
+  config.vm.network "forwarded_port", guest: 80, host: 5080
+  config.vm.network "forwarded_port", guest: 3306, host: 5006
+  config.vm.network "forwarded_port", guest: 22, host: 5022
+  config.vm.network "private_network", ip: "192.168.33.50"
+  config.vm.boot_timeout = 600
+
+  #https://github.com/devopsgroup-io/vagrant-hostmanager
+  config.hostmanager.enabled = true
+  config.hostmanager.manage_host = true
+  config.hostmanager.manage_guest = true
+  config.hostmanager.ignore_private_ip = false
+  config.hostmanager.include_offline = true
+  config.vm.define 'mcl' do |node|
+    node.vm.hostname = 'mcl.local'
+    node.vm.network :private_network, ip: '192.168.33.50'
+    node.hostmanager.aliases = %w(mcl.local)
+  end
+
+  ######### GITHUB
+  # https://stefanscherer.github.io/access-private-github-repos-in-vagrant-up/
+  config.ssh.forward_agent = true
+
+  # fix mesg: ttyname failed: Inappropriate ioctl for device
+  config.ssh.shell = "bash -c 'BASH_ENV=/etc/profile exec bash'"
+
+  config.vm.synced_folder "../", "/var/www/mcl", id: "vagrant-root", owner: "vagrant", group: "www-data", mount_options: ["dmode=777,fmode=777"]
+
+  # provision "file" doesnt have root privileges
+  # config.vm.provision "file", source: "./configs/apache/apache.projects.conf", destination: "/etc/apache2/sites-enabled/apache.projects.conf"
+
+  # restart services after files are mount to apply configuration
+  config.vm.provision :shell, path: "./configs/bootstrap.sh", run: 'always'
+
+  config.vm.provider "virtualbox" do |vb|
+      vb.memory = "1024"
+      vb.cpus = 2
+      #enable symlinks
+      vb.customize ["setextradata", :id, "VBoxInternal2/SharedFoldersEnableSymlinksCreate/v-root",  "1"]
+  end
+
+
+  config.vm.provision "shell", inline: <<-SHELL
+    apt update
+    apt-get install -y unzip
+    apt-get install -y language-pack-en-base
+    LC_ALL=en_US.UTF-8
+    LANG=en_US.UTF-8
+    LC_ALL=C.UTF-8 add-apt-repository -y ppa:ondrej/php
+    apt update
+    apt install -y apache2
+    apt install -y curl
+    apt install -y php8.0
+    apt install -y php8.0-mbstring
+    apt install -y php8.0-gd
+    apt install -y php8.0-imap
+    apt install -y php8.0-intl
+    apt install -y php8.0-xdebug
+    apt install -y php8.0-curl
+    apt install -y php8.0-mysql
+    apt install -y php8.0-cli
+    apt install -y php8.0-readline
+    apt install -y php8.0-mcrypt
+    apt install -y php8.0-xml
+    apt install -y ufw
+    apt install -y pdo-mysql
+    apt install -y php8.0-mysqli
+    apt install sshpass
+    apt-get install dos2unix
+
+    #¿?maybe not necessary
+    cd /root
+    rm .ssh
+    mkdir .ssh
+    #cp /var/www/vagrant/server/bit /root/.ssh
+    #cp /var/www/vagrant/server/bit.pub /root/.ssh
+    #cp /var/www/vagrant/server/config /root/.ssh
+    #chmod 600 bit.pub
+    #chmod 600 bit
+
+
+    #firewall
+    sudo ufw allow 3306
+    sudo ufw allow 3000
+    sudo ufw allow 22
+    sudo ufw allow 80
+
+    #mod rewrite
+    a2enmod rewrite
+
+    apt install -y sendmail
+
+    # enable mysql user
+    debconf-set-selections <<< 'mysql-server mysql-server/root_password password qwerty'
+    debconf-set-selections <<< 'mysql-server mysql-server/root_password_again password qwerty'
+    apt install -y mysql-server
+
+    ln -s /var/www/mcl/vagrant/configs/apache/apache.projects.conf /etc/apache2/sites-enabled/apache.projects.conf
+    a2ensite apache.projects
+    ln -s /var/www/mcl/vagrant/configs/mysql/mysql.projects.conf /etc/mysql/conf.d/mysql.cnf
+    ln -s /var/www/mcl/vagrant/configs/php/php.projects.ini /etc/php/8.0/apache2/conf.d/php.projects.ini
+
+    service apache2 restart
+    service mysql restart
+
+    # update APT repositories before installing anything else
+    sudo apt-get update
+
+    # install NVM, node and npm
+    # curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.33.11/install.sh | bash
+    # nvm install node
+
+    cd ~
+    curl -s https://getcomposer.org/installer | php
+    mv composer.phar /usr/local/bin/composer
+
+    # mkdir /var/cache/sf-operation
+    # chmod 777 /var/cache/sf-operation
+
+    mysql -u root -pqwerty -e "CREATE USER 'root'@'%' IDENTIFIED BY 'qwerty';"
+    mysql -u root -pqwerty -e "create database laravel;"
+    mysql -u root -pqwerty -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%';"
+
+    ## give access to root from outside the network
+    echo "GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost';" | mysql -u root -pqwerty
+    echo "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY 'qwerty';" | mysql -u root -pqwerty
+
+
+    mysql -u root -pqwerty -e alter user 'root'@'%' password expire never;
+    mysql -u root -pqwerty -e alter user 'root'@'%' identified with mysql_native_password by 'qwerty';
+    mysql -u root -pqwerty -e "flush privileges;"
+
+    apt-get install -y git
+
+    # not necessary but maybe usefull in the future
+    # gitconfig.sh file needs to be manually modified before executing vagrant up
+    # sudo bash /var/www/vagrant/gitconfig.sh
+
+    # https://stefanscherer.github.io/access-private-github-repos-in-vagrant-up/
+    # To make SSH agent forwarding work at provisioning time we have to do an additional step. The host where we want to SSH into has to be added to the known hosts in the Vagrant box
+    mkdir -p ~/.ssh
+    chmod 700 ~/.ssh
+    #ssh-keyscan -H github.com >> ~/.ssh/known_hosts
+    #ssh -T git@github.com
+    #git clone git@github.com:user/reponame.git /var/www/vagrant/server/reponame
+
+    # install ntp service to synchronize server time
+    # sudo apt-get install -y ntp
+    # sudo timedatectl set-ntp on
+    # sudo service ntp restart
+
+    # rebind for outside access
+    sudo sed -i "s/.*bind-address.*/bind-address = 0.0.0.0/" /etc/mysql/conf.d/mysql.cnf
+    service mysql restart
+
+  SHELL
+end

@@ -1,0 +1,27 @@
+version: '3.9'
+
+services:
+    app:
+        build: app
+        image: ${DOCKER_NAME}-app
+        container_name: ${DOCKER_NAME}-app
+        restart: unless-stopped
+        env_file:
+            - .env
+        environment:
+            - PGID=1000
+            - PUID=1000
+            - TZ=Europe/Madrid
+            - VIRTUAL_HOST=${APP_DOCKER_DOMAIN}
+        volumes:
+            - ../../app:/app
+            - ./app:/docker-scripts
+        networks:
+            - docker-net
+        entrypoint: /docker-scripts/init_container.sh
+
+
+networks:
+    docker-net:
+        driver: bridge
+        external: ${DOCKER_NET_EXTERNAL}

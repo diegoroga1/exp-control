@@ -1,0 +1,24 @@
+@each $color, $value in $theme-colors {
+    .btn-#{$color} {
+        background-color:$value;
+        border-color:$value;
+
+        &:hover,
+        &:active,
+        &:visited,
+        &:focus,
+        &:target,
+        &:not(:disabled):not(:disabled):active{
+            background: darken($value, 10%);
+            border-color: darken($value, 10%);
+            box-shadow: 0 0 10px $value;
+        }
+    }
+}
+
+.btn-xs {
+    border-radius: 0.2rem;
+    font-size: 0.78rem;
+    line-height: 1.5;
+    padding: 0.15rem 0.3rem;
+}
